@@ -19,7 +19,7 @@ function Nav() {
         Crisp Home Co.
       </span>
       <Link
-        href="#book"
+        href="/book"
         className="text-sm text-sage-soft hover:text-white transition-colors duration-200"
       >
         Get a quote
@@ -64,7 +64,7 @@ function Hero() {
 
         <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full sm:w-auto">
           <Link
-            href="#book"
+            href="/book"
             className="inline-flex items-center justify-center bg-sage text-navy font-semibold text-base px-8 py-4 rounded-md shadow-md hover:bg-sage-soft transition-colors duration-200 min-h-[52px]"
           >
             See instant pricing
