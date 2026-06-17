@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BookingFlow from "@/app/book/BookingFlow";
 
 export default function Home() {
   return (
@@ -18,12 +19,12 @@ function Nav() {
       <span className="font-[family-name:var(--font-display)] text-white text-xl tracking-tight">
         Crisp Home Co.
       </span>
-      <Link
-        href="/book"
+      <a
+        href="#book"
         className="text-sm text-sage-soft hover:text-white transition-colors duration-200"
       >
         Get a quote
-      </Link>
+      </a>
     </header>
   );
 }
@@ -63,18 +64,18 @@ function Hero() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full sm:w-auto">
-          <Link
-            href="/book"
+          <a
+            href="#book"
             className="inline-flex items-center justify-center bg-sage text-navy font-semibold text-base px-8 py-4 rounded-md shadow-md hover:bg-sage-soft transition-colors duration-200 min-h-[52px]"
           >
             See instant pricing
-          </Link>
-          <Link
-            href="#how-it-works"
+          </a>
+          <a
+            href="#book"
             className="inline-flex items-center justify-center border border-white/25 text-white/80 hover:text-white hover:border-white/50 text-base px-8 py-4 rounded-md transition-colors duration-200 min-h-[52px]"
           >
             How it works
-          </Link>
+          </a>
         </div>
 
         <p className="text-mist text-sm mt-1">
@@ -182,8 +183,8 @@ function PromiseStrip() {
 
 function BookingSection() {
   return (
-    <section id="book" className="py-20 px-6">
-      <div className="max-w-4xl mx-auto">
+    <section id="book" className="py-20 px-4 md:px-6">
+      <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
           <p className="text-sage text-sm tracking-[0.18em] uppercase font-semibold mb-3">
             Transparent pricing
@@ -197,35 +198,7 @@ function BookingSection() {
           </p>
         </div>
 
-        {/* Placeholder card — booking form goes here */}
-        <div className="bg-white rounded-xl border border-cream-deep shadow-sm overflow-hidden">
-          <div className="p-8 md:p-12 flex flex-col items-center justify-center text-center gap-4 min-h-[280px]">
-            <div className="w-12 h-12 rounded-full bg-cream flex items-center justify-center text-sage">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <p className="font-[family-name:var(--font-display)] text-navy text-xl">
-              Booking form coming soon
-            </p>
-            <p className="text-ink-soft text-sm max-w-sm leading-relaxed">
-              The 5-step booking flow will live here.
-              <br />
-              Size → Frequency → Add-ons → Schedule → Details.
-            </p>
-          </div>
-        </div>
+        <BookingFlow />
       </div>
     </section>
   );

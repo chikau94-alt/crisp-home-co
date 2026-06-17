@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useId } from 'react'
-import Link from 'next/link'
+import { useState } from 'react'
 import {
   RATE_CARD,
   SIZE_BANDS,
@@ -162,22 +161,9 @@ export default function BookingFlow() {
   const isQuote = mode === 'quote'
 
   return (
-    <div className="min-h-screen bg-cream pb-28 md:pb-12 font-[family-name:var(--font-body)]">
-      {/* Page top */}
-      <div className="max-w-5xl mx-auto px-4 py-8 md:py-10">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-ink-soft text-sm mb-6 hover:text-ink transition-colors"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          Back to home
-        </Link>
-
-        {/* Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-cream-deep overflow-hidden flex flex-col md:flex-row">
+    <div className="pb-28 md:pb-0 font-[family-name:var(--font-body)]">
+      {/* Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-cream-deep overflow-hidden flex flex-col md:flex-row">
 
           {/* ── Left: form area ── */}
           <div className="flex-1 flex flex-col">
@@ -289,7 +275,6 @@ export default function BookingFlow() {
               />
             </div>
           )}
-        </div>
       </div>
 
       {/* ── Mobile sticky bar ── */}
@@ -1207,7 +1192,7 @@ function ConfirmationScreen({
   const freqOption = FREQUENCIES.find(f => f.id === frequency)!
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-4 py-16 font-[family-name:var(--font-body)]">
+    <div className="flex flex-col items-center justify-center px-4 py-16 font-[family-name:var(--font-body)]">
       <div className="max-w-lg w-full flex flex-col items-center text-center gap-6">
 
         {/* Animated checkmark */}
@@ -1305,7 +1290,7 @@ function ReceiptRow({ label, value, bold }: { label: string; value: string; bold
 function QuoteConfirmationScreen({ name, onReset }: { name: string; onReset: () => void }) {
   const firstName = name.split(' ')[0] || 'there'
   return (
-    <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-4 py-16 font-[family-name:var(--font-body)]">
+    <div className="flex flex-col items-center justify-center px-4 py-16 font-[family-name:var(--font-body)]">
       <div className="max-w-md w-full flex flex-col items-center text-center gap-6">
         <div className="animate-pop-in">
           <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden>
