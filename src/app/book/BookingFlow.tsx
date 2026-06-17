@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { submitBooking } from '@/app/actions/booking'
 import {
   RATE_CARD,
   SIZE_BANDS,
@@ -69,9 +70,11 @@ type Mode = 'booking' | 'quote' | 'quoteConfirmed' | 'confirmed'
 // ─── Root component ───────────────────────────────────────────────────────────
 
 export default function BookingFlow() {
-  const [mode, setMode]     = useState<Mode>('booking')
-  const [step, setStep]     = useState(1)
+  const [mode, setMode]       = useState<Mode>('booking')
+  const [step, setStep]       = useState(1)
   const [stepKey, setStepKey] = useState(0) // bump to re-trigger CSS animation
+  const [isPending, startTransition] = useTransition()
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // ── Booking state ──
   const [size,          setSize]          = useState<SizeBand | null>(null)
@@ -108,8 +111,30 @@ export default function BookingFlow() {
   }
 
   function advance() {
-    if (step < 5) goTo(step + 1)
-    else setMode('confirmed')
+    if (step < 5) {
+      goTo(step + 1)
+      return
+    }
+    // Step 5 → submit to Supabase via server action
+    if (!size || !frequency || !date) return
+    setSubmitError(null)
+    startTransition(async () => {
+      try {
+        await submitBooking({
+          name, email, phone, address, neighborhood, notes: bookingNotes,
+          sizeBand: size, frequency, pets, heavyDirty,
+          scheduledDate: date.toISOString().split('T')[0],
+          arrivalWindow: arrival ?? '',
+          oven, fridge, windows, laundry,
+        })
+      } catch (err) {
+        // redirect() throws internally in Next.js — don't treat it as an error.
+        // Any other error we surface to the user.
+        if (err instanceof Error && err.message !== 'NEXT_REDIRECT') {
+          setSubmitError('Something went wrong. Please try again.')
+        }
+      }
+    })
   }
 
   function selectSize(band: SizeBand | 'over4500') {
@@ -144,16 +169,7 @@ export default function BookingFlow() {
     setQName(''); setQEmail(''); setQPhone(''); setQSqft(''); setQNotes('')
   }
 
-  // ── Confirmed / quote-confirmed screens ──
-  if (mode === 'confirmed' && size && frequency && pricing && date && arrival) {
-    return (
-      <ConfirmationScreen
-        size={size} frequency={frequency} pricing={pricing}
-        date={date} arrival={arrival} onReset={reset}
-      />
-    )
-  }
-
+  // ── Quote-confirmed screen (inline — no DB, custom quote path) ──
   if (mode === 'quoteConfirmed') {
     return <QuoteConfirmationScreen name={qName} onReset={reset} />
   }
@@ -272,6 +288,8 @@ export default function BookingFlow() {
                 canContinue={canContinue()}
                 onContinue={advance}
                 step={step}
+                isPending={isPending}
+                submitError={submitError}
               />
             </div>
           )}
@@ -284,6 +302,8 @@ export default function BookingFlow() {
           canContinue={canContinue()}
           onContinue={advance}
           step={step}
+          isPending={isPending}
+          submitError={submitError}
         />
       )}
     </div>
@@ -863,7 +883,7 @@ function Field({ label, required, children }: {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PricePanel({
-  pricing, size, frequency, addons, canContinue, onContinue, step,
+  pricing, size, frequency, addons, canContinue, onContinue, step, isPending, submitError,
 }: {
   pricing: PriceBreakdown | null
   size: SizeBand | null
@@ -872,6 +892,8 @@ function PricePanel({
   canContinue: boolean
   onContinue: () => void
   step: number
+  isPending: boolean
+  submitError: string | null
 }) {
   return (
     <div className="flex flex-col h-full p-6 gap-5">
@@ -890,18 +912,22 @@ function PricePanel({
         )}
       </div>
 
+      {submitError && (
+        <p className="text-red-300 text-xs text-center">{submitError}</p>
+      )}
+
       {/* CTA */}
       <button
         onClick={onContinue}
-        disabled={!canContinue}
+        disabled={!canContinue || isPending}
         className={[
           'w-full py-4 rounded-md font-semibold text-sm transition-all duration-200',
-          canContinue
+          canContinue && !isPending
             ? 'bg-sage text-navy shadow-md hover:bg-sage-soft'
             : 'bg-white/10 text-white/30 cursor-not-allowed',
         ].join(' ')}
       >
-        {step < 5 ? 'Continue' : 'Confirm booking'}
+        {isPending ? 'Saving…' : step < 5 ? 'Continue' : 'Confirm booking'}
       </button>
     </div>
   )
@@ -1033,12 +1059,14 @@ function PriceLineItems({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function MobilePriceBar({
-  pricing, canContinue, onContinue, step,
+  pricing, canContinue, onContinue, step, isPending, submitError,
 }: {
   pricing: PriceBreakdown | null
   canContinue: boolean
   onContinue: () => void
   step: number
+  isPending: boolean
+  submitError: string | null
 }) {
   const mainPrice = pricing
     ? pricing.kind === 'single'
@@ -1073,17 +1101,20 @@ function MobilePriceBar({
         </div>
         <button
           onClick={onContinue}
-          disabled={!canContinue}
+          disabled={!canContinue || isPending}
           className={[
             'px-6 py-3.5 rounded-md font-semibold text-sm transition-all duration-200',
-            canContinue
+            canContinue && !isPending
               ? 'bg-sage text-navy shadow-md hover:bg-sage-soft'
               : 'bg-white/10 text-white/30 cursor-not-allowed',
           ].join(' ')}
         >
-          {step < 5 ? 'Continue' : 'Confirm'}
+          {isPending ? 'Saving…' : step < 5 ? 'Continue' : 'Confirm'}
         </button>
       </div>
+      {submitError && (
+        <p className="text-red-300 text-xs text-center pb-1">{submitError}</p>
+      )}
     </div>
   )
 }
