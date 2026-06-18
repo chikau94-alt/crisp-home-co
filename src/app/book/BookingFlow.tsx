@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { submitBooking } from '@/app/actions/booking'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+import { createPaymentSession, type PaymentSessionResult } from '@/app/actions/stripe'
 import {
   RATE_CARD,
   SIZE_BANDS,
@@ -13,6 +15,9 @@ import {
   type AddOns,
   type PriceBreakdown,
 } from '@/lib/pricing'
+
+// Stripe.js loaded once at module level — never re-created on re-renders
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,34 +70,35 @@ function windowLabel(id: string): string {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Mode = 'booking' | 'quote' | 'quoteConfirmed' | 'confirmed'
+type Mode = 'booking' | 'quote' | 'quoteConfirmed' | 'payment'
 
 // ─── Root component ───────────────────────────────────────────────────────────
 
 export default function BookingFlow() {
   const [mode, setMode]       = useState<Mode>('booking')
   const [step, setStep]       = useState(1)
-  const [stepKey, setStepKey] = useState(0) // bump to re-trigger CSS animation
+  const [stepKey, setStepKey] = useState(0)
   const [isPending, startTransition] = useTransition()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [paymentSession, setPaymentSession] = useState<PaymentSessionResult | null>(null)
 
   // ── Booking state ──
-  const [size,          setSize]          = useState<SizeBand | null>(null)
-  const [frequency,     setFrequency]     = useState<Frequency | null>(null)
-  const [pets,          setPets]          = useState(false)
-  const [heavyDirty,    setHeavyDirty]    = useState(false)
-  const [oven,          setOven]          = useState(false)
-  const [fridge,        setFridge]        = useState(false)
-  const [windows,       setWindows]       = useState(0)
-  const [laundry,       setLaundry]       = useState(0)
-  const [date,          setDate]          = useState<Date | null>(null)
-  const [arrival,       setArrival]       = useState<string | null>(null)
-  const [name,          setName]          = useState('')
-  const [email,         setEmail]         = useState('')
-  const [phone,         setPhone]         = useState('')
-  const [neighborhood,  setNeighborhood]  = useState('')
-  const [address,       setAddress]       = useState('')
-  const [bookingNotes,  setBookingNotes]  = useState('')
+  const [size,         setSize]         = useState<SizeBand | null>(null)
+  const [frequency,    setFrequency]    = useState<Frequency | null>(null)
+  const [pets,         setPets]         = useState(false)
+  const [heavyDirty,   setHeavyDirty]   = useState(false)
+  const [oven,         setOven]         = useState(false)
+  const [fridge,       setFridge]       = useState(false)
+  const [windows,      setWindows]      = useState(0)
+  const [laundry,      setLaundry]      = useState(0)
+  const [date,         setDate]         = useState<Date | null>(null)
+  const [arrival,      setArrival]      = useState<string | null>(null)
+  const [name,         setName]         = useState('')
+  const [email,        setEmail]        = useState('')
+  const [phone,        setPhone]        = useState('')
+  const [neighborhood, setNeighborhood] = useState('')
+  const [address,      setAddress]      = useState('')
+  const [bookingNotes, setBookingNotes] = useState('')
 
   // ── Quote state ──
   const [qName,  setQName]  = useState('')
@@ -115,24 +121,22 @@ export default function BookingFlow() {
       goTo(step + 1)
       return
     }
-    // Step 5 → submit to Supabase via server action
+    // Step 5 → create payment session (inserts pending booking + Stripe PaymentIntent)
     if (!size || !frequency || !date) return
     setSubmitError(null)
     startTransition(async () => {
       try {
-        await submitBooking({
+        const session = await createPaymentSession({
           name, email, phone, address, neighborhood, notes: bookingNotes,
           sizeBand: size, frequency, pets, heavyDirty,
           scheduledDate: date.toISOString().split('T')[0],
           arrivalWindow: arrival ?? '',
           oven, fridge, windows, laundry,
         })
-      } catch (err) {
-        // redirect() throws internally in Next.js — don't treat it as an error.
-        // Any other error we surface to the user.
-        if (err instanceof Error && err.message !== 'NEXT_REDIRECT') {
-          setSubmitError('Something went wrong. Please try again.')
-        }
+        setPaymentSession(session)
+        setMode('payment')
+      } catch {
+        setSubmitError('Something went wrong. Please try again.')
       }
     })
   }
@@ -167,9 +171,127 @@ export default function BookingFlow() {
     setName(''); setEmail(''); setPhone('')
     setNeighborhood(''); setAddress(''); setBookingNotes('')
     setQName(''); setQEmail(''); setQPhone(''); setQSqft(''); setQNotes('')
+    setPaymentSession(null)
   }
 
-  // ── Quote-confirmed screen (inline — no DB, custom quote path) ──
+  // ── Payment mode ──────────────────────────────────────────────────────────────
+  if (mode === 'payment' && paymentSession) {
+    return (
+      <div className="pb-0 font-[family-name:var(--font-body)]">
+        <div className="bg-white rounded-xl shadow-sm border border-cream-deep overflow-hidden">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-5 border-b border-cream-deep">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-mist tracking-[0.14em] uppercase">
+                Step 06 of 06 &middot; Payment
+              </span>
+              <button
+                onClick={() => { setMode('booking'); setPaymentSession(null) }}
+                className="inline-flex items-center gap-1 text-xs text-ink-soft hover:text-ink transition-colors"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                Back
+              </button>
+            </div>
+            <div className="h-[3px] bg-cream-deep rounded-full overflow-hidden">
+              <div className="h-full bg-sage rounded-full w-full" />
+            </div>
+          </div>
+
+          {/* Payment content: form left, summary right */}
+          <div className="flex flex-col md:flex-row">
+            <div className="flex-1 p-6 md:p-8">
+              <Elements
+                stripe={stripePromise}
+                options={{
+                  clientSecret: paymentSession.clientSecret,
+                  appearance: {
+                    theme: 'flat',
+                    variables: {
+                      colorPrimary:     '#1a2b4a',
+                      colorBackground:  '#fffdf9',
+                      colorText:        '#2b2b2b',
+                      colorDanger:      '#dc2626',
+                      fontFamily:       'Outfit, system-ui, sans-serif',
+                      borderRadius:     '6px',
+                      spacingUnit:      '4px',
+                    },
+                    rules: {
+                      '.Input': { border: '1px solid #e4e8e1', padding: '12px 14px' },
+                      '.Input:focus': { borderColor: '#9eaa8f', boxShadow: 'none' },
+                      '.Label': { fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#5e6470', marginBottom: '6px' },
+                    },
+                  },
+                }}
+              >
+                <PaymentForm
+                  bookingId={paymentSession.bookingId}
+                  amountToday={paymentSession.amountToday}
+                />
+              </Elements>
+            </div>
+
+            {/* Desktop payment summary sidebar */}
+            <div
+              className="hidden md:flex flex-col w-72 lg:w-80 flex-shrink-0 p-6 gap-5"
+              style={{ background: 'linear-gradient(170deg, #1a2b4a 0%, #11203b 100%)' }}
+            >
+              <p className="font-[family-name:var(--font-display)] text-white/60 text-xs tracking-widest uppercase">
+                Order summary
+              </p>
+
+              <div>
+                <p className="text-sage-soft text-xs tracking-wide uppercase mb-1">
+                  {paymentSession.isRecurring ? 'Charged today (deep clean)' : 'Total due today'}
+                </p>
+                <p className="font-[family-name:var(--font-display)] text-white text-5xl font-light">
+                  {fmt(paymentSession.amountToday)}
+                </p>
+              </div>
+
+              {paymentSession.isRecurring && paymentSession.recurringAmount && (
+                <>
+                  <div className="h-px bg-white/10" />
+                  <div>
+                    <p className="text-sage-soft text-xs tracking-wide uppercase mb-1">
+                      Then per {paymentSession.frequencyLabel}
+                    </p>
+                    <p className="font-[family-name:var(--font-display)] text-white text-3xl font-light">
+                      {fmt(paymentSession.recurringAmount)}
+                    </p>
+                    <p className="text-white/40 text-xs mt-2 leading-relaxed">
+                      Your card is saved securely. We charge after each completed visit.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <div className="mt-auto flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-white/40 text-xs">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  Secured by Stripe
+                </div>
+                <div className="flex items-center gap-2 text-white/40 text-xs">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden>
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  256-bit SSL encryption
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Quote confirmed screen ────────────────────────────────────────────────────
   if (mode === 'quoteConfirmed') {
     return <QuoteConfirmationScreen name={qName} onReset={reset} />
   }
@@ -311,6 +433,87 @@ export default function BookingFlow() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// STRIPE PAYMENT FORM
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PaymentForm({
+  bookingId,
+  amountToday,
+}: {
+  bookingId: string
+  amountToday: number
+}) {
+  const stripe   = useStripe()
+  const elements = useElements()
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [errorMsg, setErrorMsg]         = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!stripe || !elements) return
+
+    setIsProcessing(true)
+    setErrorMsg(null)
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/booking/${bookingId}`,
+      },
+    })
+
+    // confirmPayment only rejects here if payment failed before redirect
+    if (error) {
+      setErrorMsg(error.message ?? 'Payment failed. Please try again.')
+      setIsProcessing(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <div>
+        <h2 className="font-[family-name:var(--font-display)] text-navy text-2xl md:text-3xl mb-1">
+          Secure payment
+        </h2>
+        <p className="text-ink-soft text-sm">
+          Your card is processed securely by Stripe. Crisp Home Co. never sees your full card number.
+        </p>
+      </div>
+
+      {/* Mobile order total */}
+      <div className="md:hidden rounded-lg border border-cream-deep bg-cream/50 px-4 py-3">
+        <p className="text-ink-soft text-xs uppercase tracking-wider mb-0.5">Due today</p>
+        <p className="font-[family-name:var(--font-display)] text-navy text-2xl">{fmt(amountToday)}</p>
+      </div>
+
+      <PaymentElement />
+
+      {errorMsg && (
+        <p className="text-red-500 text-sm">{errorMsg}</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={!stripe || isProcessing}
+        className={[
+          'w-full py-4 rounded-md font-semibold text-sm transition-all duration-200',
+          stripe && !isProcessing
+            ? 'bg-sage text-navy shadow-md hover:bg-sage-soft'
+            : 'bg-cream-deep text-mist cursor-not-allowed',
+        ].join(' ')}
+      >
+        {isProcessing ? 'Processing…' : `Pay ${fmt(amountToday)}`}
+      </button>
+
+      <p className="text-mist text-xs text-center">
+        By completing payment you agree to our cancellation policy.
+        Bookings cancelled less than 24 hours before your clean are non-refundable.
+      </p>
+    </form>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // STEP 1 — Home size
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -340,7 +543,6 @@ function Step1Size({
             onSelect={() => onSelect(band.id)}
           />
         ))}
-        {/* Over 4,500 — routes to custom quote */}
         <SizeCard
           id="over4500"
           label="Over 4,500 sq ft"
@@ -417,7 +619,7 @@ function Step2Frequency({
   const priceFor = (f: Frequency): number => {
     if (f === 'weekly')   return rates.weekly
     if (f === 'biweekly') return rates.biweekly
-    return rates.onetime  // monthly and onetime both use the onetime rate
+    return rates.onetime
   }
 
   return (
@@ -526,7 +728,6 @@ function Step3Addons({
         All optional — prices update instantly in your summary.
       </p>
 
-      {/* Toggle add-ons */}
       <div className="flex flex-col gap-3 mb-7">
         <ToggleRow
           label="Pets in home"
@@ -544,31 +745,17 @@ function Step3Addons({
         />
       </div>
 
-      {/* Divider */}
       <div className="flex items-center gap-3 mb-5">
         <div className="flex-1 h-px bg-cream-deep" />
         <span className="text-mist text-xs tracking-widest uppercase">À la carte</span>
         <div className="flex-1 h-px bg-cream-deep" />
       </div>
 
-      {/* Checkbox add-ons */}
       <div className="flex flex-col gap-3">
-        <CheckRow label="Inside oven" price="+$30" checked={oven} onChange={() => onOven(!oven)} />
+        <CheckRow label="Inside oven"   price="+$30" checked={oven}   onChange={() => onOven(!oven)} />
         <CheckRow label="Inside fridge" price="+$30" checked={fridge} onChange={() => onFridge(!fridge)} />
-        <QuantityRow
-          label="Interior windows"
-          unitPrice={8}
-          unitLabel="per window"
-          quantity={windows}
-          onChange={onWindows}
-        />
-        <QuantityRow
-          label="Laundry wash & fold"
-          unitPrice={25}
-          unitLabel="per load"
-          quantity={laundry}
-          onChange={onLaundry}
-        />
+        <QuantityRow label="Interior windows"    unitPrice={8}  unitLabel="per window" quantity={windows} onChange={onWindows} />
+        <QuantityRow label="Laundry wash & fold" unitPrice={25} unitLabel="per load"   quantity={laundry} onChange={onLaundry} />
       </div>
     </div>
   )
@@ -594,7 +781,6 @@ function ToggleRow({
         <p className="text-ink-soft text-xs mt-0.5">{description}</p>
       </div>
       <span className="text-sage text-sm font-semibold flex-shrink-0">{price}</span>
-      {/* Visual toggle */}
       <span
         className={[
           'flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative',
@@ -667,14 +853,10 @@ function QuantityRow({
     >
       <div className="flex-1">
         <p className={`font-medium text-sm ${active ? 'text-navy' : 'text-ink'}`}>{label}</p>
-        <p className="text-mist text-xs">
-          {fmt(unitPrice)} {unitLabel}
-        </p>
+        <p className="text-mist text-xs">{fmt(unitPrice)} {unitLabel}</p>
       </div>
       {active && (
-        <span className="text-sage text-sm font-semibold">
-          {fmt(quantity * unitPrice)}
-        </span>
+        <span className="text-sage text-sm font-semibold">{fmt(quantity * unitPrice)}</span>
       )}
       <div className="flex items-center gap-2">
         <button
@@ -729,7 +911,6 @@ function Step4Schedule({
         We&apos;ll arrive in your chosen 2-hour window.
       </p>
 
-      {/* Date chips */}
       <div className="overflow-x-auto pb-1 -mx-1">
         <div className="flex gap-2 px-1 min-w-max">
           {UPCOMING_DATES.map((d, i) => {
@@ -757,7 +938,6 @@ function Step4Schedule({
         </div>
       </div>
 
-      {/* Arrival window */}
       <div className="mt-7">
         <p className="text-sm font-semibold text-ink mb-3">Arrival window</p>
         <div className="flex flex-wrap gap-2">
@@ -811,42 +991,27 @@ function Step5Details({
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Full name" required>
-            <input
-              type="text" value={name} onChange={e => onName(e.target.value)}
-              placeholder="Jane Smith"
-              className={fieldCls}
-            />
+            <input type="text" value={name} onChange={e => onName(e.target.value)}
+              placeholder="Jane Smith" className={fieldCls} />
           </Field>
           <Field label="Email" required>
-            <input
-              type="email" value={email} onChange={e => onEmail(e.target.value)}
-              placeholder="jane@example.com"
-              className={fieldCls}
-            />
+            <input type="email" value={email} onChange={e => onEmail(e.target.value)}
+              placeholder="jane@example.com" className={fieldCls} />
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Phone" required>
-            <input
-              type="tel" value={phone} onChange={e => onPhone(e.target.value)}
-              placeholder="(801) 555-0100"
-              className={fieldCls}
-            />
+            <input type="tel" value={phone} onChange={e => onPhone(e.target.value)}
+              placeholder="(801) 555-0100" className={fieldCls} />
           </Field>
           <Field label="Neighborhood">
-            <input
-              type="text" value={neighborhood} onChange={e => onNeighborhood(e.target.value)}
-              placeholder="Sugar House, Millcreek…"
-              className={fieldCls}
-            />
+            <input type="text" value={neighborhood} onChange={e => onNeighborhood(e.target.value)}
+              placeholder="Sugar House, Millcreek…" className={fieldCls} />
           </Field>
         </div>
         <Field label="Service address" required>
-          <input
-            type="text" value={address} onChange={e => onAddress(e.target.value)}
-            placeholder="123 Main St, Salt Lake City, UT"
-            className={fieldCls}
-          />
+          <input type="text" value={address} onChange={e => onAddress(e.target.value)}
+            placeholder="123 Main St, Salt Lake City, UT" className={fieldCls} />
         </Field>
         <Field label="Notes for your cleaner">
           <textarea
@@ -901,7 +1066,6 @@ function PricePanel({
         Your crisp price
       </p>
 
-      {/* Price display */}
       <div className="flex-1">
         {!pricing ? (
           <PricePlaceholder size={size} />
@@ -916,7 +1080,6 @@ function PricePanel({
         <p className="text-red-300 text-xs text-center">{submitError}</p>
       )}
 
-      {/* CTA */}
       <button
         onClick={onContinue}
         disabled={!canContinue || isPending}
@@ -927,7 +1090,7 @@ function PricePanel({
             : 'bg-white/10 text-white/30 cursor-not-allowed',
         ].join(' ')}
       >
-        {isPending ? 'Saving…' : step < 5 ? 'Continue' : 'Confirm booking'}
+        {isPending ? 'Loading…' : step < 5 ? 'Continue' : 'Continue to payment'}
       </button>
     </div>
   )
@@ -935,12 +1098,10 @@ function PricePanel({
 
 function PricePlaceholder({ size }: { size: SizeBand | null }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="h-14 rounded-md bg-white/5 flex items-center justify-center">
-        <p className="text-white/30 text-sm text-center px-3">
-          {size ? 'Select a frequency to see your price' : 'Select a home size to get started'}
-        </p>
-      </div>
+    <div className="h-14 rounded-md bg-white/5 flex items-center justify-center">
+      <p className="text-white/30 text-sm text-center px-3">
+        {size ? 'Select a frequency to see your price' : 'Select a home size to get started'}
+      </p>
     </div>
   )
 }
@@ -958,10 +1119,7 @@ function SinglePriceDisplay({
         <p className="font-[family-name:var(--font-display)] text-white text-5xl font-light">
           {fmt(bp.total)}
         </p>
-        {bp.isMonthly && (
-          <p className="text-sage-soft text-sm mt-1">per month</p>
-        )}
-        {/* First-clean note for monthly */}
+        {bp.isMonthly && <p className="text-sage-soft text-sm mt-1">per month</p>}
         {bp.isMonthly && (
           <p className="text-white/50 text-xs mt-2 leading-relaxed">
             First visit is a deep clean at this rate.
@@ -981,20 +1139,13 @@ function RecurringPriceDisplay({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      {/* First visit */}
       <div>
-        <p className="text-sage-soft text-xs tracking-wide uppercase mb-1">
-          First clean (deep clean)
-        </p>
+        <p className="text-sage-soft text-xs tracking-wide uppercase mb-1">First clean (deep clean)</p>
         <p className="font-[family-name:var(--font-display)] text-white text-4xl font-light">
           {fmt(bp.firstVisitTotal)}
         </p>
       </div>
-
-      {/* Divider */}
       <div className="h-px bg-white/10" />
-
-      {/* Recurring */}
       <div>
         <p className="text-sage-soft text-xs tracking-wide uppercase mb-1">
           Then per {bp.frequencyLabel}
@@ -1003,14 +1154,11 @@ function RecurringPriceDisplay({
           {fmt(bp.recurringTotal)}
         </p>
       </div>
-
-      {/* Itemized for first visit */}
       <PriceLineItems bp={bp} isFirstVisit addons={addons} />
     </div>
   )
 }
 
-/** Itemized breakdown rows, shared by single and recurring panels */
 function PriceLineItems({
   bp, isFirstVisit, addons,
 }: {
@@ -1018,29 +1166,31 @@ function PriceLineItems({
   isFirstVisit: boolean
   addons: AddOns
 }) {
-  const isSingle   = bp.kind === 'single'
+  const isSingle    = bp.kind === 'single'
   const isRecurring = bp.kind === 'recurring'
 
   const base  = isRecurring
-    ? (isFirstVisit ? bp.firstVisitBaseRate    : bp.recurringBaseRate)
+    ? (isFirstVisit ? bp.firstVisitBaseRate  : bp.recurringBaseRate)
     : bp.baseRate
   const heavy = isRecurring
-    ? (isFirstVisit ? bp.firstHeavySurcharge   : bp.recurringHeavySurcharge)
+    ? (isFirstVisit ? bp.firstHeavySurcharge : bp.recurringHeavySurcharge)
     : (isSingle ? bp.heavySurcharge : 0)
   const pets  = bp.petsCharge
   const ac    = bp.alacarteCharge
 
   const rows: { label: string; amount: number }[] = [
     { label: 'Base cleaning',  amount: base },
-    ...(heavy > 0       ? [{ label: 'Heavy/dirty (+20%)',  amount: heavy }] : []),
-    ...(pets  > 0       ? [{ label: 'Pets in home',        amount: pets  }] : []),
-    ...(addons.oven     ? [{ label: 'Inside oven',          amount: 30   }] : []),
-    ...(addons.fridge   ? [{ label: 'Inside fridge',        amount: 30   }] : []),
+    ...(heavy > 0         ? [{ label: 'Heavy/dirty (+20%)',  amount: heavy }] : []),
+    ...(pets  > 0         ? [{ label: 'Pets in home',        amount: pets  }] : []),
+    ...(addons.oven       ? [{ label: 'Inside oven',          amount: 30   }] : []),
+    ...(addons.fridge     ? [{ label: 'Inside fridge',        amount: 30   }] : []),
     ...(addons.windows > 0 ? [{ label: `Windows (×${addons.windows})`, amount: addons.windows * 8  }] : []),
     ...(addons.laundry > 0 ? [{ label: `Laundry (×${addons.laundry})`, amount: addons.laundry * 25 }] : []),
   ]
 
-  if (rows.length <= 1) return null  // only base — no breakdown needed
+  void ac  // ac is reflected in the individual addon rows
+
+  if (rows.length <= 1) return null
 
   return (
     <div className="flex flex-col gap-1.5 border-t border-white/10 pt-3">
@@ -1109,7 +1259,7 @@ function MobilePriceBar({
               : 'bg-white/10 text-white/30 cursor-not-allowed',
           ].join(' ')}
         >
-          {isPending ? 'Saving…' : step < 5 ? 'Continue' : 'Confirm'}
+          {isPending ? 'Loading…' : step < 5 ? 'Continue' : 'Pay now'}
         </button>
       </div>
       {submitError && (
@@ -1170,7 +1320,6 @@ function QuoteForm({
             rows={3} className={`${fieldCls} resize-none`} />
         </Field>
 
-        {/* Desktop submit button (mobile handled by parent bar) */}
         <button
           onClick={onSubmit}
           disabled={!canSubmit}
@@ -1185,7 +1334,6 @@ function QuoteForm({
           Send quote request
         </button>
 
-        {/* Mobile submit */}
         <div className="fixed bottom-0 left-0 right-0 md:hidden z-30 border-t border-cream-deep px-4 pt-3 pb-5 bg-white">
           <button
             onClick={onSubmit}
@@ -1206,115 +1354,6 @@ function QuoteForm({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONFIRMATION SCREEN
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ConfirmationScreen({
-  size, frequency, pricing, date, arrival, onReset,
-}: {
-  size: SizeBand
-  frequency: Frequency
-  pricing: PriceBreakdown
-  date: Date
-  arrival: string
-  onReset: () => void
-}) {
-  const sizeBand  = SIZE_BANDS.find(b => b.id === size)!
-  const freqOption = FREQUENCIES.find(f => f.id === frequency)!
-
-  return (
-    <div className="flex flex-col items-center justify-center px-4 py-16 font-[family-name:var(--font-body)]">
-      <div className="max-w-lg w-full flex flex-col items-center text-center gap-6">
-
-        {/* Animated checkmark */}
-        <div className="animate-pop-in">
-          <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden>
-            <circle cx="36" cy="36" r="36" fill="#9eaa8f" fillOpacity="0.15" />
-            <circle cx="36" cy="36" r="28" fill="#9eaa8f" fillOpacity="0.2" />
-            <polyline
-              points="22,36 32,46 50,28"
-              fill="none"
-              stroke="#9eaa8f"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray="60"
-              className="animate-draw-check"
-            />
-          </svg>
-        </div>
-
-        <div>
-          <h1 className="font-[family-name:var(--font-display)] text-navy text-4xl md:text-5xl leading-tight">
-            Consider it handled.
-          </h1>
-          <p className="font-[family-name:var(--font-display)] italic text-sage text-lg mt-2">
-            Come home to crisp.
-          </p>
-        </div>
-
-        <p className="text-ink-soft leading-relaxed max-w-sm">
-          We&apos;ve received your booking. You&apos;ll get a confirmation email shortly — and a reminder 24 hours before your clean.
-        </p>
-
-        {/* Receipt card */}
-        <div className="w-full bg-white rounded-xl border border-cream-deep shadow-sm overflow-hidden">
-          <div
-            className="px-6 py-4"
-            style={{ background: 'linear-gradient(135deg, #1a2b4a 0%, #11203b 100%)' }}
-          >
-            <p className="text-white/50 text-xs tracking-widest uppercase mb-1">Booking summary</p>
-            <p className="font-[family-name:var(--font-display)] text-white text-lg">
-              {sizeBand.label} · {freqOption.label}
-            </p>
-          </div>
-          <div className="px-6 py-5 flex flex-col gap-3 text-sm">
-            <ReceiptRow label="Date"           value={formatDateFull(date)} />
-            <ReceiptRow label="Arrival window" value={windowLabel(arrival)} />
-
-            <div className="h-px bg-cream-deep my-1" />
-
-            {pricing.kind === 'single' ? (
-              <>
-                <ReceiptRow
-                  label={pricing.isMonthly ? 'Per month' : 'Deep clean total'}
-                  value={fmt(pricing.total)}
-                  bold
-                />
-              </>
-            ) : (
-              <>
-                <ReceiptRow label="First clean (deep clean)" value={fmt(pricing.firstVisitTotal)} bold />
-                <ReceiptRow
-                  label={`Then per ${pricing.frequencyLabel}`}
-                  value={fmt(pricing.recurringTotal)}
-                />
-              </>
-            )}
-          </div>
-        </div>
-
-        <button
-          onClick={onReset}
-          className="text-ink-soft text-sm hover:text-ink transition-colors underline underline-offset-4"
-        >
-          Start a new booking
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function ReceiptRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <span className="text-ink-soft">{label}</span>
-      <span className={bold ? 'font-semibold text-navy' : 'text-ink'}>{value}</span>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // QUOTE CONFIRMATION SCREEN
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1327,12 +1366,8 @@ function QuoteConfirmationScreen({ name, onReset }: { name: string; onReset: () 
           <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden>
             <circle cx="36" cy="36" r="36" fill="#9eaa8f" fillOpacity="0.15" />
             <circle cx="36" cy="36" r="28" fill="#9eaa8f" fillOpacity="0.2" />
-            <polyline
-              points="22,36 32,46 50,28"
-              fill="none" stroke="#9eaa8f" strokeWidth="3.5"
-              strokeLinecap="round" strokeLinejoin="round"
-              strokeDasharray="60" className="animate-draw-check"
-            />
+            <polyline points="22,36 32,46 50,28" fill="none" stroke="#9eaa8f" strokeWidth="3.5"
+              strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" className="animate-draw-check" />
           </svg>
         </div>
         <div>

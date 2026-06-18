@@ -2,46 +2,23 @@
 
 @theme {
   /* Colors */
-  --color-navy: #1a2b4a;
+  --color-navy:      #1a2b4a;
   --color-navy-deep: #11203b;
-  --color-sage: #9eaa8f;
+  --color-sage:      #9eaa8f;
   --color-sage-soft: #b8c4a8;
-  --color-cream: #f3f5f2;
-  --color-cream-deep: #e4e8e1;
-  --color-ink: #2b2b2b;
-  --color-ink-soft: #5e6470;
-  --color-mist: #8a93a3;
-  --color-white: #fffdf9;
+  --color-cream:     #f3f5f2;
+  --color-cream-deep:#e4e8e1;
+  --color-ink:       #2b2b2b;
+  --color-ink-soft:  #5e6470;
+  --color-mist:      #8a93a3;
+  --color-white:     #fffdf9;
 
   /* Fonts */
   --font-display: var(--font-fraunces), Georgia, serif;
-  --font-body: var(--font-outfit), system-ui, sans-serif;
+  --font-body:    var(--font-outfit), system-ui, sans-serif;
 }
 
-/* Step transition — applied to step content container via key-remount */
-@keyframes stepEnter {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0);   }
-}
-
-.animate-step-enter {
-  animation: stepEnter 0.28s ease forwards;
-}
-
-/* Checkmark draw animation for confirmation screen */
-@keyframes drawCheck {
-  from { stroke-dashoffset: 60; }
-  to   { stroke-dashoffset: 0;  }
-}
-
-@keyframes popIn {
-  0%   { transform: scale(0.6); opacity: 0; }
-  70%  { transform: scale(1.08); }
-  100% { transform: scale(1);   opacity: 1; }
-}
-
-.animate-pop-in   { animation: popIn    0.45s cubic-bezier(.175,.885,.32,1.275) forwards; }
-.animate-draw-check { animation: drawCheck 0.5s ease 0.3s forwards; stroke-dashoffset: 60; }
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 
 html {
   background-color: #f3f5f2;
@@ -49,4 +26,61 @@ html {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
+
+/* Accessible focus ring — shown only on keyboard navigation */
+:focus-visible {
+  outline: 2px solid #9eaa8f;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default focus outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Better tap targets on mobile */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+
+@keyframes stepEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.animate-step-enter {
+  animation: stepEnter 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes drawCheck {
+  from { stroke-dashoffset: 65; }
+  to   { stroke-dashoffset: 0;  }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.7); opacity: 0; }
+  65%  { transform: scale(1.06); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.animate-pop-in     { animation: popIn     0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.animate-draw-check { animation: drawCheck 0.55s ease 0.35s forwards; stroke-dashoffset: 65; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.animate-fade-up { animation: fadeUp 0.4s ease forwards; }
+
+/* ── Scrollbar (webkit) ───────────────────────────────────────────────────── */
+
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e4e8e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #8a93a3; }

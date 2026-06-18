@@ -6,18 +6,20 @@ import { SIZE_BANDS, FREQUENCIES, fmt } from '@/lib/pricing'
 export const dynamic = 'force-dynamic'
 
 interface Props {
-  params: Promise<{ id: string }>
+  params:      Promise<{ id: string }>
+  searchParams: Promise<{ redirect_status?: string; payment_intent?: string }>
 }
 
-export default async function BookingConfirmationPage({ params }: Props) {
-  const { id } = await params
+export default async function BookingConfirmationPage({ params, searchParams }: Props) {
+  const { id }             = await params
+  const { redirect_status } = await searchParams
 
   const { data: booking } = await supabaseAdmin()
     .from('bookings')
     .select(`
       *,
       customers ( name, email, phone ),
-      addresses ( street, neighborhood ),
+      addresses ( street ),
       booking_addons ( addon_type, quantity, unit_price )
     `)
     .eq('id', id)
@@ -25,12 +27,23 @@ export default async function BookingConfirmationPage({ params }: Props) {
 
   if (!booking) notFound()
 
-  const sizeBand   = SIZE_BANDS.find(b => b.id === booking.size_band)
-  const freqOption = FREQUENCIES.find(f => f.id === booking.frequency)
+  const sizeBand    = SIZE_BANDS.find(b => b.id === booking.size_band)
+  const freqOption  = FREQUENCIES.find(f => f.id === booking.frequency)
   const isRecurring = booking.frequency === 'weekly' || booking.frequency === 'biweekly'
 
-  const scheduledDate = new Date(booking.scheduled_date + 'T12:00:00')
-  const formattedDate = scheduledDate.toLocaleDateString('en-US', {
+  // After Stripe redirect, redirect_status=succeeded means payment went through
+  // even if the webhook hasn't confirmed the DB row yet
+  const paymentSucceeded =
+    redirect_status === 'succeeded' ||
+    booking.payment_status === 'succeeded' ||
+    booking.status === 'confirmed'
+
+  const paymentFailed =
+    redirect_status === 'failed' ||
+    booking.payment_status === 'failed'
+
+  const scheduledDate  = new Date(booking.scheduled_date + 'T12:00:00')
+  const formattedDate  = scheduledDate.toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   })
 
@@ -48,6 +61,33 @@ export default async function BookingConfirmationPage({ params }: Props) {
     fridge:  'Inside fridge',
     windows: 'Interior windows',
     laundry: 'Laundry wash & fold',
+  }
+
+  if (paymentFailed) {
+    return (
+      <div className="min-h-screen bg-cream font-[family-name:var(--font-body)] px-4 py-16 md:py-24">
+        <div className="max-w-lg mx-auto flex flex-col items-center text-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="font-[family-name:var(--font-display)] text-navy text-3xl">Payment failed</h1>
+            <p className="text-ink-soft mt-2">Your card was not charged. Please try again.</p>
+          </div>
+          <Link
+            href="/#book"
+            className="px-6 py-3 rounded-md bg-sage text-navy font-semibold text-sm hover:bg-sage-soft transition-colors"
+          >
+            Try again
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -82,14 +122,15 @@ export default async function BookingConfirmationPage({ params }: Props) {
         </div>
 
         <p className="text-ink-soft leading-relaxed max-w-sm">
-          We&apos;ve received your booking, {booking.customers.name.split(' ')[0]}. A confirmation will be sent
-          to <span className="text-ink">{booking.customers.email}</span> shortly.
+          {paymentSucceeded
+            ? <>Payment confirmed. We&apos;ve received your booking, {booking.customers.name.split(' ')[0]}. A confirmation will be sent to <span className="text-ink">{booking.customers.email}</span>.</>
+            : <>We&apos;ve received your booking, {booking.customers.name.split(' ')[0]}. A confirmation will be sent to <span className="text-ink">{booking.customers.email}</span>.</>
+          }
         </p>
 
         {/* Receipt card */}
         <div className="w-full bg-white rounded-xl border border-cream-deep shadow-sm overflow-hidden text-left">
 
-          {/* Navy header */}
           <div
             className="px-6 py-5"
             style={{ background: 'linear-gradient(135deg, #1a2b4a 0%, #11203b 100%)' }}
@@ -102,7 +143,6 @@ export default async function BookingConfirmationPage({ params }: Props) {
             </p>
           </div>
 
-          {/* Details */}
           <div className="px-6 py-5 flex flex-col gap-3 text-sm">
             <Row label="Date"           value={formattedDate} />
             <Row label="Arrival window" value={windowLabel} />
@@ -110,14 +150,9 @@ export default async function BookingConfirmationPage({ params }: Props) {
 
             <div className="h-px bg-cream-deep my-1" />
 
-            {/* Pricing */}
             {isRecurring ? (
               <>
-                <Row
-                  label="First clean (deep clean)"
-                  value={fmt(booking.first_visit_price)}
-                  bold
-                />
+                <Row label="Charged today (first deep clean)" value={fmt(booking.first_visit_price)} bold />
                 <Row
                   label={`Then per ${booking.frequency === 'weekly' ? 'week' : '2 weeks'}`}
                   value={fmt(booking.recurring_price)}
@@ -131,7 +166,6 @@ export default async function BookingConfirmationPage({ params }: Props) {
               />
             )}
 
-            {/* Add-ons */}
             {booking.booking_addons?.length > 0 && (
               <>
                 <div className="h-px bg-cream-deep my-1" />
