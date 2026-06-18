@@ -112,3 +112,39 @@ export async function sendReminderEmail(bookingId: string) {
   const { sendReminderEmail: send } = await import('@/lib/email')
   await send(bookingId)
 }
+
+// ── Cancel booking ────────────────────────────────────────────────────────────
+
+export async function cancelBooking(bookingId: string) {
+  const { error } = await getSupabaseAdmin()
+    .from('bookings')
+    .update({ status: 'cancelled' })
+    .eq('id', bookingId)
+  if (error) throw new Error('Failed to cancel booking: ' + error.message)
+  revalidatePath('/admin')
+  revalidatePath(`/admin/bookings/${bookingId}`)
+}
+
+// ── Delete booking ────────────────────────────────────────────────────────────
+
+export async function deleteBooking(bookingId: string) {
+  const db = getSupabaseAdmin()
+
+  // Remove photos from storage first
+  const { data: photos } = await db
+    .from('booking_photos')
+    .select('storage_path')
+    .eq('booking_id', bookingId)
+
+  if (photos && photos.length > 0) {
+    await db.storage.from('booking-photos').remove(photos.map(p => p.storage_path))
+  }
+
+  // Delete child records then booking
+  await db.from('booking_photos').delete().eq('booking_id', bookingId)
+  await db.from('booking_addons').delete().eq('booking_id', bookingId)
+  const { error } = await db.from('bookings').delete().eq('id', bookingId)
+  if (error) throw new Error('Failed to delete booking: ' + error.message)
+
+  revalidatePath('/admin')
+}

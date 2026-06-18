@@ -4,8 +4,9 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { SIZE_BANDS, FREQUENCIES, fmt } from '@/lib/pricing'
-import { markBookingComplete, uploadCompletionPhoto, deleteBookingPhoto, sendReminderEmail } from '@/app/actions/admin'
+import { markBookingComplete, uploadCompletionPhoto, deleteBookingPhoto, sendReminderEmail, cancelBooking } from '@/app/actions/admin'
 import ReminderButton from './ReminderButton'
+import DeleteBookingButton from './DeleteBookingButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -212,6 +213,32 @@ export default async function BookingDetailPage({ params }: Props) {
 
         {/* Reminder email */}
         <ReminderButton bookingId={id} />
+
+        {/* Cancel / Delete */}
+        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+          <div className="bg-white rounded-xl border border-cream-deep shadow-sm px-6 py-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-ink text-sm">Cancel booking</p>
+              <p className="text-ink-soft text-xs mt-0.5">Marks as cancelled. Keeps the record for your reference.</p>
+            </div>
+            <form action={async () => { 'use server'; await cancelBooking(id) }}>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-md border border-amber-400 text-amber-700 font-semibold text-sm hover:bg-amber-50 transition-colors whitespace-nowrap"
+              >
+                Cancel booking
+              </button>
+            </form>
+          </div>
+        )}
+
+        <div className="bg-white rounded-xl border border-red-100 shadow-sm px-6 py-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-red-600 text-sm">Delete booking</p>
+            <p className="text-ink-soft text-xs mt-0.5">Permanently removes this booking and all photos. Cannot be undone.</p>
+          </div>
+          <DeleteBookingButton bookingId={id} />
+        </div>
 
         {/* Mark complete */}
         {booking.status !== 'completed' && (
