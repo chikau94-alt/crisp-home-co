@@ -25,6 +25,9 @@ export interface BookingPayload {
   fridge: boolean
   windows: number
   laundry: number
+  // Promo code
+  promoCode: string
+  discountPercent: number
 }
 
 export async function submitBooking(payload: BookingPayload): Promise<never> {

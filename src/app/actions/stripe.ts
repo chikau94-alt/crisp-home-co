@@ -4,14 +4,17 @@ import { getStripe } from '@/lib/stripe'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { calculatePrice, fmt, type SizeBand, type Frequency, type AddOns } from '@/lib/pricing'
 import type { BookingPayload } from './booking'
+import { validatePromoCode } from './promo'
 
 export interface PaymentSessionResult {
   clientSecret: string
   bookingId: string
-  amountToday: number        // in dollars, for display
+  amountToday: number
   isRecurring: boolean
   recurringAmount: number | null
   frequencyLabel: string | null
+  discountPercent: number
+  discountAmount: number
 }
 
 export async function createPaymentSession(
@@ -25,17 +28,27 @@ export async function createPaymentSession(
     address, neighborhood, notes,
     sizeBand, frequency, pets, heavyDirty, scheduledDate, arrivalWindow,
     oven, fridge, windows, laundry,
+    promoCode,
   } = payload
 
   // ── Server-side price recalculation (never trust the browser) ────────────────
   const addons: AddOns = { pets, heavyDirty, oven, fridge, windows, laundry }
   const pricing        = calculatePrice(sizeBand as SizeBand, frequency as Frequency, addons)
 
-  const isRecurring    = pricing.kind === 'recurring'
-  const amountToday    = isRecurring ? pricing.firstVisitTotal : pricing.total
-  const recurringAmt   = isRecurring ? pricing.recurringTotal  : null
-  const freqLabel      = isRecurring ? pricing.frequencyLabel  : null
+  const isRecurring  = pricing.kind === 'recurring'
+  const baseToday    = isRecurring ? pricing.firstVisitTotal : pricing.total
+  const recurringAmt = isRecurring ? pricing.recurringTotal  : null
+  const freqLabel    = isRecurring ? pricing.frequencyLabel  : null
 
+  // ── Server-side promo validation (never trust the browser discount) ───────────
+  let discountPercent = 0
+  if (promoCode?.trim()) {
+    const promo = await validatePromoCode(promoCode)
+    if (promo.valid) discountPercent = promo.discountPercent
+  }
+
+  const discountAmount = discountPercent > 0 ? Math.round(baseToday * discountPercent) / 100 : 0
+  const amountToday    = Math.max(0, baseToday - discountAmount)
   const amountCents    = Math.round(amountToday * 100)
 
   // ── 1. Create Stripe Customer ─────────────────────────────────────────────────
@@ -89,9 +102,11 @@ export async function createPaymentSession(
       neighborhood:            neighborhood || null,
       stripe_payment_intent_id: paymentIntent.id,
       payment_status:          'pending',
-      first_visit_price:       isRecurring ? pricing.firstVisitTotal : null,
+      first_visit_price:       isRecurring ? amountToday            : null,
       recurring_price:         isRecurring ? pricing.recurringTotal  : null,
-      one_time_price:          !isRecurring ? pricing.total          : null,
+      one_time_price:          !isRecurring ? amountToday            : null,
+      promo_code:              promoCode?.trim().toUpperCase() || null,
+      discount_percent:        discountPercent || null,
     })
     .select('id')
     .single()
@@ -116,6 +131,8 @@ export async function createPaymentSession(
     isRecurring,
     recurringAmount: recurringAmt,
     frequencyLabel:  freqLabel,
+    discountPercent,
+    discountAmount,
   }
 }
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { createPaymentSession, type PaymentSessionResult } from '@/app/actions/stripe'
+import { validatePromoCode } from '@/app/actions/promo'
 import {
   RATE_CARD,
   SIZE_BANDS,
@@ -100,6 +101,13 @@ export default function BookingFlow() {
   const [address,      setAddress]      = useState('')
   const [bookingNotes, setBookingNotes] = useState('')
 
+  // ── Promo state ──
+  const [promoInput,       setPromoInput]       = useState('')
+  const [promoApplied,     setPromoApplied]     = useState('')
+  const [discountPercent,  setDiscountPercent]  = useState(0)
+  const [promoError,       setPromoError]       = useState<string | null>(null)
+  const [promoLoading,     setPromoLoading]     = useState(false)
+
   // ── Quote state ──
   const [qName,  setQName]  = useState('')
   const [qEmail, setQEmail] = useState('')
@@ -110,6 +118,30 @@ export default function BookingFlow() {
   const addons: AddOns = { pets, heavyDirty, oven, fridge, windows, laundry }
   const pricing: PriceBreakdown | null =
     size && frequency ? calculatePrice(size, frequency, addons) : null
+
+  async function applyPromo() {
+    if (!promoInput.trim()) return
+    setPromoLoading(true)
+    setPromoError(null)
+    const result = await validatePromoCode(promoInput)
+    setPromoLoading(false)
+    if (result.valid) {
+      setPromoApplied(promoInput.trim().toUpperCase())
+      setDiscountPercent(result.discountPercent)
+      setPromoError(null)
+    } else {
+      setPromoError(result.error ?? 'Invalid code.')
+      setPromoApplied('')
+      setDiscountPercent(0)
+    }
+  }
+
+  function removePromo() {
+    setPromoInput('')
+    setPromoApplied('')
+    setDiscountPercent(0)
+    setPromoError(null)
+  }
 
   function goTo(next: number) {
     setStep(next)
@@ -132,6 +164,8 @@ export default function BookingFlow() {
           scheduledDate: date.toISOString().split('T')[0],
           arrivalWindow: arrival ?? '',
           oven, fridge, windows, laundry,
+          promoCode: promoApplied,
+          discountPercent,
         })
         setPaymentSession(session)
         setMode('payment')
@@ -391,6 +425,11 @@ export default function BookingFlow() {
                   neighborhood={neighborhood} onNeighborhood={setNeighborhood}
                   address={address} onAddress={setAddress}
                   notes={bookingNotes} onNotes={setBookingNotes}
+                  promoInput={promoInput} onPromoInput={setPromoInput}
+                  promoApplied={promoApplied} promoError={promoError}
+                  promoLoading={promoLoading}
+                  onApplyPromo={applyPromo} onRemovePromo={removePromo}
+                  discountPercent={discountPercent}
                 />
               )}
             </div>
@@ -412,6 +451,7 @@ export default function BookingFlow() {
                 step={step}
                 isPending={isPending}
                 submitError={submitError}
+                discountPercent={discountPercent}
               />
             </div>
           )}
@@ -426,6 +466,7 @@ export default function BookingFlow() {
           step={step}
           isPending={isPending}
           submitError={submitError}
+          discountPercent={discountPercent}
         />
       )}
     </div>
@@ -972,6 +1013,8 @@ function Step5Details({
   name, onName, email, onEmail, phone, onPhone,
   neighborhood, onNeighborhood, address, onAddress,
   notes, onNotes,
+  promoInput, onPromoInput, promoApplied, promoError,
+  promoLoading, onApplyPromo, onRemovePromo, discountPercent,
 }: {
   name: string; onName: (v: string) => void
   email: string; onEmail: (v: string) => void
@@ -979,6 +1022,11 @@ function Step5Details({
   neighborhood: string; onNeighborhood: (v: string) => void
   address: string; onAddress: (v: string) => void
   notes: string; onNotes: (v: string) => void
+  promoInput: string; onPromoInput: (v: string) => void
+  promoApplied: string; promoError: string | null
+  promoLoading: boolean
+  onApplyPromo: () => void; onRemovePromo: () => void
+  discountPercent: number
 }) {
   return (
     <div>
@@ -1021,6 +1069,49 @@ function Step5Details({
             className={`${fieldCls} resize-none`}
           />
         </Field>
+
+        {/* Promo code */}
+        <div>
+          <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-1.5">
+            Promo code
+          </label>
+          {promoApplied ? (
+            <div className="flex items-center justify-between px-4 py-3 rounded-md bg-sage/10 border border-sage">
+              <div>
+                <p className="text-sm font-semibold text-navy">{promoApplied}</p>
+                <p className="text-xs text-sage">{discountPercent}% off applied to your first clean</p>
+              </div>
+              <button
+                type="button"
+                onClick={onRemovePromo}
+                className="text-xs text-ink-soft hover:text-ink transition-colors underline"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoInput}
+                onChange={e => onPromoInput(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === 'Enter' && onApplyPromo()}
+                placeholder="Enter code"
+                className={fieldCls + ' flex-1'}
+              />
+              <button
+                type="button"
+                onClick={onApplyPromo}
+                disabled={promoLoading || !promoInput.trim()}
+                className="px-4 py-2.5 rounded-md bg-navy text-white text-sm font-semibold hover:bg-navy/80 transition-colors disabled:opacity-40 whitespace-nowrap"
+              >
+                {promoLoading ? '…' : 'Apply'}
+              </button>
+            </div>
+          )}
+          {promoError && <p className="text-red-500 text-xs mt-1.5">{promoError}</p>}
+        </div>
+
       </div>
     </div>
   )
@@ -1048,7 +1139,7 @@ function Field({ label, required, children }: {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PricePanel({
-  pricing, size, frequency, addons, canContinue, onContinue, step, isPending, submitError,
+  pricing, size, frequency, addons, canContinue, onContinue, step, isPending, submitError, discountPercent,
 }: {
   pricing: PriceBreakdown | null
   size: SizeBand | null
@@ -1059,6 +1150,7 @@ function PricePanel({
   step: number
   isPending: boolean
   submitError: string | null
+  discountPercent: number
 }) {
   return (
     <div className="flex flex-col h-full p-6 gap-5">
@@ -1070,9 +1162,9 @@ function PricePanel({
         {!pricing ? (
           <PricePlaceholder size={size} />
         ) : pricing.kind === 'single' ? (
-          <SinglePriceDisplay bp={pricing} frequency={frequency!} addons={addons} />
+          <SinglePriceDisplay bp={pricing} frequency={frequency!} addons={addons} discountPercent={discountPercent} />
         ) : (
-          <RecurringPriceDisplay bp={pricing} addons={addons} />
+          <RecurringPriceDisplay bp={pricing} addons={addons} discountPercent={discountPercent} />
         )}
       </div>
 
@@ -1107,24 +1199,29 @@ function PricePlaceholder({ size }: { size: SizeBand | null }) {
 }
 
 function SinglePriceDisplay({
-  bp, frequency, addons,
+  bp, frequency, addons, discountPercent,
 }: {
   bp: Extract<PriceBreakdown, { kind: 'single' }>
   frequency: Frequency
   addons: AddOns
+  discountPercent: number
 }) {
+  const discounted = discountPercent > 0 ? Math.round(bp.total * (1 - discountPercent / 100)) : null
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="font-[family-name:var(--font-display)] text-white text-5xl font-light">
-          {fmt(bp.total)}
-        </p>
-        {bp.isMonthly && <p className="text-sage-soft text-sm mt-1">per month</p>}
-        {bp.isMonthly && (
-          <p className="text-white/50 text-xs mt-2 leading-relaxed">
-            First visit is a deep clean at this rate.
-          </p>
+        {discounted !== null ? (
+          <div className="flex items-end gap-2">
+            <p className="font-[family-name:var(--font-display)] text-white text-5xl font-light">{fmt(discounted)}</p>
+            <p className="text-white/40 text-xl line-through mb-1">{fmt(bp.total)}</p>
+          </div>
+        ) : (
+          <p className="font-[family-name:var(--font-display)] text-white text-5xl font-light">{fmt(bp.total)}</p>
         )}
+        {discountPercent > 0 && (
+          <p className="text-sage-soft text-xs mt-1">{discountPercent}% promo applied</p>
+        )}
+        {bp.isMonthly && <p className="text-sage-soft text-sm mt-1">per month</p>}
       </div>
       <PriceLineItems bp={bp} isFirstVisit={false} addons={addons} />
     </div>
@@ -1132,18 +1229,26 @@ function SinglePriceDisplay({
 }
 
 function RecurringPriceDisplay({
-  bp, addons,
+  bp, addons, discountPercent,
 }: {
   bp: Extract<PriceBreakdown, { kind: 'recurring' }>
   addons: AddOns
+  discountPercent: number
 }) {
+  const discountedFirst = discountPercent > 0 ? Math.round(bp.firstVisitTotal * (1 - discountPercent / 100)) : null
   return (
     <div className="flex flex-col gap-5">
       <div>
         <p className="text-sage-soft text-xs tracking-wide uppercase mb-1">First clean (deep clean)</p>
-        <p className="font-[family-name:var(--font-display)] text-white text-4xl font-light">
-          {fmt(bp.firstVisitTotal)}
-        </p>
+        {discountedFirst !== null ? (
+          <div className="flex items-end gap-2">
+            <p className="font-[family-name:var(--font-display)] text-white text-4xl font-light">{fmt(discountedFirst)}</p>
+            <p className="text-white/40 text-lg line-through mb-0.5">{fmt(bp.firstVisitTotal)}</p>
+          </div>
+        ) : (
+          <p className="font-[family-name:var(--font-display)] text-white text-4xl font-light">{fmt(bp.firstVisitTotal)}</p>
+        )}
+        {discountPercent > 0 && <p className="text-sage-soft text-xs mt-1">{discountPercent}% promo applied</p>}
       </div>
       <div className="h-px bg-white/10" />
       <div>
@@ -1209,7 +1314,7 @@ function PriceLineItems({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function MobilePriceBar({
-  pricing, canContinue, onContinue, step, isPending, submitError,
+  pricing, canContinue, onContinue, step, isPending, submitError, discountPercent,
 }: {
   pricing: PriceBreakdown | null
   canContinue: boolean
@@ -1217,12 +1322,14 @@ function MobilePriceBar({
   step: number
   isPending: boolean
   submitError: string | null
+  discountPercent: number
 }) {
-  const mainPrice = pricing
-    ? pricing.kind === 'single'
-      ? pricing.total
-      : pricing.firstVisitTotal
+  const rawPrice = pricing
+    ? pricing.kind === 'single' ? pricing.total : pricing.firstVisitTotal
     : null
+  const mainPrice = rawPrice !== null && discountPercent > 0
+    ? Math.round(rawPrice * (1 - discountPercent / 100))
+    : rawPrice
 
   return (
     <div
