@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendBookingConfirmation, sendAdminNotification } from '@/lib/email'
+import { sendBookingSMS } from '@/lib/sms'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
       Promise.allSettled([
         sendBookingConfirmation(booking.id),
         sendAdminNotification(booking.id),
+        sendBookingSMS(booking.id),
       ]).catch(() => {})
     }
   }
