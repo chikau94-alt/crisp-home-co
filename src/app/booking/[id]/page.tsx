@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Script from 'next/script'
 import { getSupabaseAdmin as supabaseAdmin } from '@/lib/supabase/admin'
 import { SIZE_BANDS, FREQUENCIES, fmt } from '@/lib/pricing'
 
@@ -92,6 +93,14 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
   return (
     <div className="min-h-screen bg-cream font-[family-name:var(--font-body)] px-4 py-16 md:py-24">
+      {paymentSucceeded && (
+        <Script id="gads-conversion" strategy="afterInteractive">
+          {`gtag('event', 'conversion', {
+            'send_to': 'AW-18254764683/9GlYCRbk2MicIulxoBE',
+            'transaction_id': '${id}'
+          });`}
+        </Script>
+      )}
       <div className="max-w-lg mx-auto flex flex-col items-center text-center gap-8">
 
         {/* Animated checkmark */}
