@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import BookingFlow from "@/app/book/BookingFlow";
 
 export default function Home() {
@@ -7,6 +8,7 @@ export default function Home() {
       <Nav />
       <Hero />
       <PromiseStrip />
+      <PhotoGrid />
       <BookingSection />
       <Footer />
     </main>
@@ -32,11 +34,23 @@ function Nav() {
 function Hero() {
   return (
     <section
-      className="relative flex flex-col items-center justify-center text-center px-6 py-32 md:py-44 min-h-[90vh] md:min-h-[80vh]"
-      style={{
-        background: "linear-gradient(160deg, #1a2b4a 0%, #11203b 100%)",
-      }}
+      className="relative flex flex-col items-center justify-center text-center px-6 py-32 md:py-44 min-h-[90vh] md:min-h-[80vh] overflow-hidden"
     >
+      {/* Background photo */}
+      <Image
+        src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1600&q=80&auto=format&fit=crop"
+        alt="Spotlessly clean modern kitchen"
+        fill
+        className="object-cover object-center"
+        priority
+        unoptimized
+      />
+      {/* Dark navy overlay */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(160deg, rgba(26,43,74,0.93) 0%, rgba(17,32,59,0.90) 100%)" }}
+        aria-hidden
+      />
       {/* Subtle dot-grid texture */}
       <div
         className="absolute inset-0 opacity-[0.03]"
@@ -179,6 +193,72 @@ function PromiseStrip() {
       </div>
     </section>
   );
+}
+
+const photos = [
+  {
+    src: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&q=80&auto=format&fit=crop",
+    alt: "Bright, spotless living room with white sofa",
+    label: "Living areas",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=800&q=80&auto=format&fit=crop",
+    alt: "Gleaming white bathroom with fresh towels",
+    label: "Bathrooms",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80&auto=format&fit=crop",
+    alt: "Clean modern kitchen with polished counters",
+    label: "Kitchens",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=800&q=80&auto=format&fit=crop",
+    alt: "Neatly made bed in a bright, tidy bedroom",
+    label: "Bedrooms",
+  },
+]
+
+function PhotoGrid() {
+  return (
+    <section className="bg-cream py-16 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-sage text-xs uppercase tracking-widest font-semibold mb-3">Results</p>
+          <h2 className="font-[family-name:var(--font-display)] text-navy text-3xl md:text-4xl leading-tight">
+            What crisp looks like.
+          </h2>
+          <p className="text-ink-soft mt-3 text-base max-w-md mx-auto">
+            Every room. Every surface. Every visit.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          {photos.map((p) => (
+            <div key={p.label} className="group relative aspect-[3/4] rounded-lg overflow-hidden">
+              <Image
+                src={p.src}
+                alt={p.alt}
+                fill
+                className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                unoptimized
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-navy/60 via-transparent to-transparent" />
+              <span className="absolute bottom-3 left-3 text-white text-xs font-medium tracking-wide">
+                {p.label}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="text-center mt-8">
+          <a
+            href="#book"
+            className="inline-flex items-center gap-2 text-sage text-sm font-medium hover:text-sage-soft transition-colors"
+          >
+            Book your first clean →
+          </a>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function BookingSection() {

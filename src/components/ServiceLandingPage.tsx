@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { ServicePage } from '@/lib/services'
 
 const SCHEMA_ORG = (page: ServicePage) => {
@@ -30,9 +31,16 @@ export default function ServiceLandingPage({ page }: { page: ServicePage }) {
       />
 
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg, #1a2b4a 0%, #11203b 100%)' }}
-           className="px-6 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto">
+      <div className="relative px-6 py-16 md:py-24 overflow-hidden">
+        <Image
+          src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1400&q=75&auto=format&fit=crop"
+          alt="Clean home interior"
+          fill
+          className="object-cover object-center"
+          unoptimized
+        />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(26,43,74,0.95) 0%, rgba(17,32,59,0.92) 100%)' }} />
+        <div className="relative z-10 max-w-4xl mx-auto">
           <Link href="/" className="font-[family-name:var(--font-display)] text-white/60 hover:text-white transition-colors text-sm mb-8 inline-block">
             ← Crisp Home Co.
           </Link>
