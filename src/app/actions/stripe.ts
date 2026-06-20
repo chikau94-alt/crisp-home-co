@@ -42,13 +42,18 @@ export async function createPaymentSession(
 
   // ── Server-side promo validation (never trust the browser discount) ───────────
   let discountPercent = 0
+  let discountAmount  = 0
   if (promoCode?.trim()) {
     const promo = await validatePromoCode(promoCode)
-    if (promo.valid) discountPercent = promo.discountPercent
+    if (promo.valid) {
+      discountPercent = promo.discountPercent
+      discountAmount  = promo.flatDiscount > 0
+        ? promo.flatDiscount
+        : Math.round(baseToday * promo.discountPercent) / 100
+    }
   }
 
-  const discountAmount = discountPercent > 0 ? Math.round(baseToday * discountPercent) / 100 : 0
-  const amountToday    = Math.max(0, baseToday - discountAmount)
+  const amountToday = Math.max(0, baseToday - discountAmount)
   const amountCents    = Math.round(amountToday * 100)
 
   // ── 1. Create Stripe Customer ─────────────────────────────────────────────────
@@ -107,6 +112,7 @@ export async function createPaymentSession(
       one_time_price:          !isRecurring ? amountToday            : null,
       promo_code:              promoCode?.trim().toUpperCase() || null,
       discount_percent:        discountPercent || null,
+      referral_code:           promoCode?.trim().toUpperCase().match(/^[A-Z]+-[A-Z0-9]{4}$/) ? promoCode.trim().toUpperCase() : null,
     })
     .select('id')
     .single()

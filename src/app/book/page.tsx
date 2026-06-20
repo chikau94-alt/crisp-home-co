@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   description: 'Book your premium flat-rate home cleaning in Salt Lake City. Instant pricing, no callbacks.',
 }
 
-export default function BookPage() {
+interface Props { searchParams: Promise<{ ref?: string }> }
+
+export default async function BookPage({ searchParams }: Props) {
+  const { ref } = await searchParams
+
   return (
     <div className="min-h-screen flex flex-col font-[family-name:var(--font-body)]" style={{ background: 'linear-gradient(160deg, #1a2b4a 0%, #11203b 45%, #1a2b4a 100%)' }}>
 
@@ -21,10 +25,17 @@ export default function BookPage() {
         </p>
       </header>
 
+      {/* Referral banner */}
+      {ref && (
+        <div className="mx-4 mt-2 px-4 py-3 rounded-lg bg-sage/20 border border-sage/30 text-center">
+          <p className="text-sage text-sm font-medium">🎉 $50 referral discount applied — complete your booking below.</p>
+        </div>
+      )}
+
       {/* Centered booking card */}
       <div className="flex-1 flex items-start justify-center px-4 pb-8 pt-2 md:items-center md:pt-0">
         <div className="w-full max-w-4xl">
-          <BookingFlow />
+          <BookingFlow referralCode={ref} />
         </div>
       </div>
 

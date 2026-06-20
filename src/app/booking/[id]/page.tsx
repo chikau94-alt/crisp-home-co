@@ -192,6 +192,18 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
           </div>
         </div>
 
+        {/* Referral CTA */}
+        <div className="w-full bg-white rounded-xl border border-cream-deep shadow-sm p-6 text-center">
+          <p className="font-[family-name:var(--font-display)] text-navy text-lg mb-1">Give $50, Get $50</p>
+          <p className="text-ink-soft text-sm mb-4">Refer a friend and you both get $50 off your next clean.</p>
+          <Link
+            href="/refer"
+            className="inline-block px-6 py-2.5 rounded-md bg-sage text-navy font-semibold text-sm hover:bg-sage-soft transition-colors"
+          >
+            Get My Referral Link →
+          </Link>
+        </div>
+
         <Link
           href="/#book"
           className="text-ink-soft text-sm hover:text-ink transition-colors underline underline-offset-4"

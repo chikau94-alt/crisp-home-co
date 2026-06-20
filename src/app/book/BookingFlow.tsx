@@ -75,7 +75,7 @@ type Mode = 'booking' | 'quote' | 'quoteConfirmed' | 'payment'
 
 // ─── Root component ───────────────────────────────────────────────────────────
 
-export default function BookingFlow() {
+export default function BookingFlow({ referralCode }: { referralCode?: string }) {
   const [mode, setMode]       = useState<Mode>('booking')
   const [step, setStep]       = useState(1)
   const [stepKey, setStepKey] = useState(0)
@@ -102,7 +102,7 @@ export default function BookingFlow() {
   const [bookingNotes, setBookingNotes] = useState('')
 
   // ── Promo state ──
-  const [promoInput,       setPromoInput]       = useState('')
+  const [promoInput,       setPromoInput]       = useState(referralCode ?? '')
   const [promoApplied,     setPromoApplied]     = useState('')
   const [discountPercent,  setDiscountPercent]  = useState(0)
   const [promoError,       setPromoError]       = useState<string | null>(null)

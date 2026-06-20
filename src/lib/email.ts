@@ -303,6 +303,190 @@ export async function sendReminderEmail(bookingId: string) {
   })
 }
 
+// ── Review request email (sent 24h after completed clean) ────────────────────
+
+export async function sendReviewRequestEmail(bookingId: string) {
+  const d = await fetchEmailData(bookingId)
+
+  const GOOGLE_REVIEW_URL = 'https://g.page/r/CrisphomeCo/review'
+
+  const html = emailShell({
+    preheader: `How did your clean go, ${d.firstName}? We'd love to hear from you.`,
+    body: `
+      <h1 style="font-family:Georgia,serif; font-size:28px; color:#1a2b4a; margin:0 0 8px; font-weight:400;">
+        How was your clean, ${d.firstName}?
+      </h1>
+      <p style="color:#5e6470; font-size:15px; margin:0 0 24px; line-height:1.6;">
+        We hope your home is feeling crisp. It would mean the world to us if you took
+        60 seconds to leave a quick review — it helps other Salt Lake City homeowners
+        find us and helps us keep our standards high.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+        <tr>
+          <td align="center">
+            <a href="${GOOGLE_REVIEW_URL}"
+               style="display:inline-block; background:#9eaa8f; color:#1a2b4a; text-decoration:none;
+                      font-size:15px; font-weight:600; padding:14px 32px; border-radius:6px;
+                      letter-spacing:0.01em;">
+              Leave a Google Review ★
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="background:#f3f5f2; border-radius:8px; margin-bottom:24px;">
+        <tr>
+          <td style="padding:20px 24px;">
+            <p style="margin:0 0 6px; font-size:11px; text-transform:uppercase;
+                      letter-spacing:0.1em; color:#8a93a3;">Your clean</p>
+            <p style="margin:0; font-size:15px; color:#2b2b2b; font-weight:500;">
+              ${d.formattedDate} · ${d.sizeBandLabel}
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="color:#5e6470; font-size:14px; line-height:1.7; margin-bottom:8px;">
+        If anything wasn't perfect, please reply to this email directly — we'll make it right.
+      </p>
+      <p style="color:#5e6470; font-size:14px; line-height:1.7;">
+        Thank you for choosing Crisp Home Co.
+      </p>
+    `,
+  })
+
+  await resend.emails.send({
+    from:    FROM,
+    to:      d.customerEmail,
+    subject: `How was your clean, ${d.firstName}? ⭐`,
+    html,
+  })
+}
+
+// ── Referral reward email (sent to referrer when friend books) ────────────────
+
+export async function sendReferralRewardEmail(
+  referrerEmail: string,
+  referrerName: string,
+  referredName: string,
+  rewardCode: string,
+) {
+  const firstName = referrerName.split(' ')[0]
+  const html = emailShell({
+    preheader: `${referredName} just booked — you've earned $50 off your next clean.`,
+    body: `
+      <h1 style="font-family:Georgia,serif; font-size:28px; color:#1a2b4a; margin:0 0 8px; font-weight:400;">
+        Your referral paid off, ${firstName}.
+      </h1>
+      <p style="color:#5e6470; font-size:15px; margin:0 0 24px; line-height:1.6;">
+        ${referredName} just completed their first Crisp clean using your referral link.
+        As a thank-you, here's <strong style="color:#1a2b4a;">$50 off</strong> your next booking.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="background:#1a2b4a; border-radius:8px; margin-bottom:28px;">
+        <tr>
+          <td align="center" style="padding:24px;">
+            <p style="margin:0 0 6px; font-size:11px; text-transform:uppercase;
+                      letter-spacing:0.12em; color:#9eaa8f;">Your reward code</p>
+            <p style="margin:0; font-family:Georgia,serif; font-size:32px;
+                      color:#fffdf9; letter-spacing:0.08em;">${rewardCode}</p>
+          </td>
+        </tr>
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+        <tr>
+          <td align="center">
+            <a href="${BRAND_URL}/book"
+               style="display:inline-block; background:#9eaa8f; color:#1a2b4a; text-decoration:none;
+                      font-size:15px; font-weight:600; padding:14px 32px; border-radius:6px;">
+              Book My Next Clean →
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <p style="color:#5e6470; font-size:13px; line-height:1.7;">
+        Enter the code above at checkout. Valid for 90 days. Thank you for spreading the word —
+        you're what makes Crisp Home Co. grow.
+      </p>
+    `,
+  })
+
+  await resend.emails.send({
+    from:    FROM,
+    to:      referrerEmail,
+    subject: `You've earned $50 off — ${referredName} just booked!`,
+    html,
+  })
+}
+
+// ── Abandoned booking recovery email ─────────────────────────────────────────
+
+export async function sendAbandonedBookingEmail(
+  customerEmail: string,
+  firstName: string,
+) {
+  const html = emailShell({
+    preheader: 'You left something behind — your booking is waiting.',
+    body: `
+      <h1 style="font-family:Georgia,serif; font-size:28px; color:#1a2b4a; margin:0 0 8px; font-weight:400;">
+        You left something behind, ${firstName}.
+      </h1>
+      <p style="color:#5e6470; font-size:15px; margin:0 0 24px; line-height:1.6;">
+        It looks like you started a booking with Crisp Home Co. but didn't finish.
+        Your price is saved — it only takes 2 more minutes to confirm your clean.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+        <tr>
+          <td align="center">
+            <a href="${BRAND_URL}/book"
+               style="display:inline-block; background:#9eaa8f; color:#1a2b4a; text-decoration:none;
+                      font-size:15px; font-weight:600; padding:14px 32px; border-radius:6px;">
+              Complete My Booking →
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="background:#f3f5f2; border-radius:8px; margin-bottom:24px;">
+        <tr>
+          <td style="padding:20px 24px;">
+            <p style="margin:0 0 10px; font-size:14px; color:#5e6470; line-height:1.6;">
+              ✓ &nbsp;Flat-rate pricing — no hourly surprises
+            </p>
+            <p style="margin:0 0 10px; font-size:14px; color:#5e6470; line-height:1.6;">
+              ✓ &nbsp;Same-week availability
+            </p>
+            <p style="margin:0 0 10px; font-size:14px; color:#5e6470; line-height:1.6;">
+              ✓ &nbsp;Vetted, insured local cleaners
+            </p>
+            <p style="margin:0; font-size:14px; color:#5e6470; line-height:1.6;">
+              ✓ &nbsp;Satisfaction guaranteed
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="color:#5e6470; font-size:14px; line-height:1.7;">
+        Questions? Reply to this email — we're happy to help.
+      </p>
+    `,
+  })
+
+  await resend.emails.send({
+    from:    FROM,
+    to:      customerEmail,
+    subject: `You left something behind — your booking is waiting`,
+    html,
+  })
+}
+
 // ── Shared HTML helpers ───────────────────────────────────────────────────────
 
 function emailShell({ preheader, body }: { preheader: string; body: string }): string {
