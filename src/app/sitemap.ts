@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { BLOG_POSTS } from '@/lib/blog'
 import { NEIGHBORHOOD_SLUGS } from '@/lib/neighborhoods'
+import { SERVICE_SLUGS } from '@/lib/services'
 
 const BASE = 'https://crisphomeco.com'
 
@@ -25,5 +26,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'monthly' as const,
   }))
 
-  return [...static_pages, ...blog_pages, ...neighborhood_pages]
+  const service_pages = SERVICE_SLUGS.map(slug => ({
+    url:             `${BASE}/${slug}`,
+    priority:        0.9,
+    changeFrequency: 'monthly' as const,
+  }))
+
+  return [...static_pages, ...service_pages, ...blog_pages, ...neighborhood_pages]
 }
