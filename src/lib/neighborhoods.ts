@@ -224,6 +224,32 @@ export const NEIGHBORHOODS: Neighborhood[] = [
       { name: 'Tony B., West Jordan', quote: 'The flat-rate pricing is a game changer. I know exactly what I\'m paying every month.', stars: 5 },
     ],
   },
+  {
+    slug: 'sandy',
+    name: 'Sandy',
+    headline: 'Premium cleaning, now in Sandy.',
+    subheadline: 'Flat-rate pricing. No callbacks. Book in under 2 minutes.',
+    description: 'Serving Sandy and surrounding neighborhoods in the south valley.',
+    seoTitle: 'Sandy Utah House Cleaning Service — Crisp Home Co.',
+    seoDescription: 'Professional flat-rate home cleaning in Sandy, UT. Vetted cleaners, instant pricing, same-week availability. Book in under 2 minutes.',
+    testimonials: [
+      { name: 'Jennifer M., Sandy', quote: 'Booked online in literally 2 minutes. They showed up on time and left our home spotless. We\'re on a bi-weekly plan now.', stars: 5 },
+      { name: 'David R., Sandy', quote: 'Crisp Home Co. is the best cleaning service we\'ve used in Sandy. Consistent, professional, and fairly priced.', stars: 5 },
+    ],
+  },
+  {
+    slug: 'south-salt-lake',
+    name: 'South Salt Lake',
+    headline: 'Premium cleaning, now in South Salt Lake.',
+    subheadline: 'Flat-rate pricing. No callbacks. Book in under 2 minutes.',
+    description: 'Serving South Salt Lake City and surrounding areas.',
+    seoTitle: 'South Salt Lake House Cleaning Service — Crisp Home Co.',
+    seoDescription: 'Professional flat-rate home cleaning in South Salt Lake, UT. Instant online pricing, vetted cleaners, same-week availability.',
+    testimonials: [
+      { name: 'Amanda L., South Salt Lake', quote: 'Finally found a cleaning company that doesn\'t make you wait for a quote. Booked it, they came, done. Perfect.', stars: 5 },
+      { name: 'Chris P., South Salt Lake', quote: 'Very professional and thorough. Our place looked better than it ever has. Will definitely be booking again.', stars: 5 },
+    ],
+  },
 ]
 
 export const NEIGHBORHOOD_SLUGS = NEIGHBORHOODS.map(n => n.slug)

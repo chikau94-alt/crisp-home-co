@@ -400,6 +400,96 @@ export const SERVICE_PAGES: ServicePage[] = [
     cta: { headline: 'Your team deserves a crisp office.', sub: 'Small office and studio cleaning in Salt Lake City. Flat-rate pricing, flexible scheduling.', button: 'Book Office Cleaning →' },
     schema: 'Service',
   },
+  {
+    slug:           'one-time-cleaning',
+    seoTitle:       'One-Time Cleaning Service Salt Lake City | Crisp Home Co.',
+    seoDescription: 'Book a one-time house cleaning in Salt Lake City. Flat-rate pricing, no commitment, same-week availability. Vetted local cleaners.',
+    hero: {
+      headline:    'One Clean. No Commitment.',
+      subheadline: 'Book a single professional clean across Salt Lake City. Flat-rate pricing, no subscription required.',
+    },
+    badge: 'No recurring commitment',
+    features: [
+      { title: 'Flat-rate, no commitment', body: 'Pay once for a single clean. No recurring billing, no contracts, no cancellation hoops.' },
+      { title: 'Every one-time clean is a deep clean', body: 'Single visits get the full treatment — baseboards, appliances, grout, and every surface we\'d otherwise maintain.' },
+      { title: 'Perfect for any occasion', body: 'Pre-party, post-party, before listing your home, after a renovation, or just when life gets busy. Book when you need it.' },
+      { title: 'Same-week availability', body: 'We keep slots open for one-time bookings. Most clients are scheduled within 2–3 days.' },
+    ],
+    pricing: [
+      { label: 'Under 1,500 sq ft', price: '$220' },
+      { label: '1,500–2,500 sq ft', price: '$300' },
+      { label: '2,500–3,500 sq ft', price: '$390' },
+      { label: '3,500–4,500 sq ft', price: '$480' },
+    ],
+    faq: [
+      { q: 'Will I be pressured to sign up for a recurring plan?', a: 'Never. One-time bookings are fully standalone. If you want to add a recurring plan later, you can — but there\'s no pressure.' },
+      { q: 'Is a one-time clean as thorough as a recurring clean?', a: 'More thorough, actually. One-time visits are always deep cleans. We cover everything including baseboards, inside appliances, and areas that get skipped in maintenance cleans.' },
+      { q: 'How far in advance do I need to book?', a: 'Same-week bookings are usually available. For a specific date, booking 3–5 days ahead is ideal.' },
+      { q: 'Can I add add-ons like oven or fridge cleaning?', a: 'Yes — inside oven, inside fridge, interior windows, and laundry are all available at checkout.' },
+    ],
+    cta: { headline: 'Book your one-time clean.', sub: 'No commitment. Flat-rate. Same-week availability across Salt Lake City.', button: 'See My Price →' },
+    schema: 'Service',
+  },
+  {
+    slug:           'biweekly-cleaning',
+    seoTitle:       'Bi-Weekly House Cleaning Salt Lake City | Crisp Home Co.',
+    seoDescription: 'Bi-weekly house cleaning in Salt Lake City. Flat-rate pricing starting at $160/visit. Most popular plan — come home to crisp every two weeks.',
+    hero: {
+      headline:    'Clean Every Two Weeks. Always Ready.',
+      subheadline: 'Our most popular plan. Flat-rate bi-weekly cleaning across Salt Lake City — your home stays guest-ready without the daily effort.',
+    },
+    badge: 'Most popular plan',
+    features: [
+      { title: 'The most popular schedule', body: 'Bi-weekly is the sweet spot — frequent enough to stay consistently clean, spaced enough to be cost-effective.' },
+      { title: 'Lower rate than one-time', body: 'A maintained home cleans faster. Bi-weekly visits are priced below the one-time rate — you save on every visit.' },
+      { title: 'First visit is always a deep clean', body: 'We start from a clean baseline. Your first bi-weekly visit covers everything, then we maintain the standard from there.' },
+      { title: 'No contract, cancel anytime', body: 'Your card is charged after each completed visit. No prepayment, no annual commitment.' },
+    ],
+    pricing: [
+      { label: 'Under 1,500 sq ft', price: '$160/visit', note: 'Most popular' },
+      { label: '1,500–2,500 sq ft', price: '$200/visit' },
+      { label: '2,500–3,500 sq ft', price: '$260/visit' },
+      { label: '3,500–4,500 sq ft', price: '$320/visit' },
+    ],
+    faq: [
+      { q: 'What does bi-weekly mean — every two weeks?', a: 'Yes — once every 14 days. We\'ll set a regular day that works for your schedule.' },
+      { q: 'What if I want to skip a visit?', a: 'Contact us and we\'ll skip that cycle. We ask for reasonable notice so we can adjust our schedule.' },
+      { q: 'How is bi-weekly priced vs one-time?', a: 'Bi-weekly is priced lower per visit. Under 1,500 sq ft: $220 one-time vs $160 bi-weekly. You save $60 every visit.' },
+      { q: 'Can I switch to weekly or monthly later?', a: 'Yes — contact us anytime to change your frequency.' },
+    ],
+    cta: { headline: 'Start your bi-weekly plan.', sub: 'First visit is a deep clean. Every visit after keeps your home consistently crisp.', button: 'Start Bi-Weekly Plan →' },
+    schema: 'Service',
+  },
+  {
+    slug:           'weekly-cleaning',
+    seoTitle:       'Weekly House Cleaning Service Salt Lake City | Crisp Home Co.',
+    seoDescription: 'Weekly house cleaning in Salt Lake City. Flat-rate from $145/visit. Best value plan — your home is always ready, every single week.',
+    hero: {
+      headline:    'Always Clean. Every Week.',
+      subheadline: 'Weekly cleaning is our best-value plan. Your home is always ready — for guests, for family, for yourself. Flat-rate across Salt Lake City.',
+    },
+    badge: 'Best value per visit',
+    features: [
+      { title: 'Best rate per visit', body: 'Weekly clients get our lowest per-visit rate. Under 1,500 sq ft starts at $145 — our most affordable clean.' },
+      { title: 'Your home is always ready', body: 'No more pre-guest scrambles. Weekly cleaning means your home is always in guest-ready condition.' },
+      { title: 'Consistent cleaner, consistent results', body: 'Weekly clients get the same cleaner each visit. They learn your home, your preferences, and your standards.' },
+      { title: 'No contract, cancel anytime', body: 'Charged after each completed visit. Change frequency or pause anytime — no lock-in.' },
+    ],
+    pricing: [
+      { label: 'Under 1,500 sq ft', price: '$145/visit', note: 'Best value' },
+      { label: '1,500–2,500 sq ft', price: '$180/visit' },
+      { label: '2,500–3,500 sq ft', price: '$235/visit' },
+      { label: '3,500–4,500 sq ft', price: '$290/visit' },
+    ],
+    faq: [
+      { q: 'Is weekly cleaning really worth it?', a: 'For busy households, yes. It costs less per visit than bi-weekly, your home never gets out of hand, and the mental load of cleaning disappears entirely.' },
+      { q: 'What\'s included in a weekly visit?', a: 'Full vacuuming and mopping, bathrooms, kitchen, dusting, and trash. It\'s a full clean every time — not a lighter "maintenance" visit.' },
+      { q: 'Do I get the same cleaner every week?', a: 'We aim for this and usually achieve it. Your weekly cleaner learns your home over time.' },
+      { q: 'How does billing work?', a: 'Your card is charged after each completed visit at the weekly rate. No prepayment or annual commitment.' },
+    ],
+    cta: { headline: 'Start weekly. Never think about cleaning again.', sub: 'Our lowest per-visit rate. Always clean, every week, across Salt Lake City.', button: 'Start Weekly Plan →' },
+    schema: 'Service',
+  },
 ]
 
 export function getServicePage(slug: string): ServicePage | undefined {
