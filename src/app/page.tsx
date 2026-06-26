@@ -84,12 +84,12 @@ function Hero() {
           >
             See instant pricing
           </a>
-          <a
-            href="#book"
+          <Link
+            href="/quote"
             className="inline-flex items-center justify-center border border-white/25 text-white/80 hover:text-white hover:border-white/50 text-base px-8 py-4 rounded-md transition-colors duration-200 min-h-[52px]"
           >
-            How it works
-          </a>
+            Get a free quote
+          </Link>
         </div>
 
         <p className="text-mist text-sm mt-1">

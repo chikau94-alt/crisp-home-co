@@ -46,3 +46,33 @@ export async function sendBookingSMS(bookingId: string): Promise<void> {
     to:   process.env.ADMIN_PHONE!,
   })
 }
+
+interface LeadSMS {
+  name: string
+  phone: string
+  email: string
+  sizeBand?: string | null
+  serviceType?: string | null
+  preferredContact?: string | null
+}
+
+// Fires the moment a free-quote lead comes in. Speed-to-lead is everything —
+// the goal is to text/call them back within minutes while they're still warm.
+export async function sendLeadSMS(lead: LeadSMS): Promise<void> {
+  const lines = [
+    `🔥 NEW LEAD — call them back fast!`,
+    `👤 ${lead.name}`,
+    `📞 ${lead.phone}`,
+    `✉️ ${lead.email}`,
+  ]
+  if (lead.sizeBand)         lines.push(`🏠 ${lead.sizeBand}`)
+  if (lead.serviceType)      lines.push(`🧽 ${lead.serviceType}`)
+  if (lead.preferredContact) lines.push(`💬 Prefers: ${lead.preferredContact}`)
+  lines.push(`🔗 crisphomeco.com/admin`)
+
+  await client.messages.create({
+    body: lines.join('\n'),
+    from: process.env.TWILIO_FROM_NUMBER!,
+    to:   process.env.ADMIN_PHONE!,
+  })
+}

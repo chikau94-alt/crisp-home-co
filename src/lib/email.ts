@@ -487,6 +487,119 @@ export async function sendAbandonedBookingEmail(
   })
 }
 
+// ── Free-quote lead emails ────────────────────────────────────────────────────
+
+interface LeadEmail {
+  name: string
+  email: string
+  phone: string
+  sizeBand?: string | null
+  serviceType?: string | null
+  message?: string | null
+  preferredContact?: string | null
+}
+
+// Sent to YOU the instant a lead comes in. Plain and scannable — built for speed.
+export async function sendLeadNotificationToAdmin(lead: LeadEmail) {
+  const row = (label: string, value?: string | null) =>
+    value
+      ? `<tr><td style="padding:6px 0; color:#8a93a3; font-size:13px; width:140px;">${label}</td>
+         <td style="padding:6px 0; color:#2b2b2b; font-size:14px;">${value}</td></tr>`
+      : ''
+
+  const html = emailShell({
+    preheader: `New lead: ${lead.name} — ${lead.phone}`,
+    body: `
+      <h1 style="font-family:Georgia,serif; font-size:26px; color:#1a2b4a; margin:0 0 6px; font-weight:400;">
+        🔥 New lead — call them back fast.
+      </h1>
+      <p style="color:#5e6470; font-size:14px; margin:0 0 24px; line-height:1.6;">
+        Speed wins. The faster you reach out, the more likely they book.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f2; border-radius:8px; padding:8px 20px; margin-bottom:24px;">
+        <tr><td style="padding:8px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${row('Name', lead.name)}
+            ${row('Phone', lead.phone)}
+            ${row('Email', lead.email)}
+            ${row('Home size', lead.sizeBand)}
+            ${row('Interested in', lead.serviceType)}
+            ${row('Prefers', lead.preferredContact)}
+            ${row('Message', lead.message)}
+          </table>
+        </td></tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td align="center">
+          <a href="tel:${(lead.phone || '').replace(/[^0-9+]/g, '')}"
+             style="display:inline-block; background:#9eaa8f; color:#1a2b4a; text-decoration:none;
+                    font-size:15px; font-weight:600; padding:14px 32px; border-radius:6px;">
+            Call ${lead.name.split(' ')[0]} now →
+          </a>
+        </td></tr>
+      </table>
+    `,
+  })
+
+  await resend.emails.send({
+    from:     FROM,
+    to:       ADMIN_TO,
+    replyTo:  lead.email,
+    subject:  `🔥 New lead: ${lead.name} — ${lead.phone}`,
+    html,
+  })
+}
+
+// Auto-reply to the customer so they know a human is coming. Builds trust and
+// reduces the chance they go shop a competitor while waiting.
+export async function sendLeadConfirmationToCustomer(lead: LeadEmail) {
+  const firstName = lead.name.split(' ')[0]
+  const html = emailShell({
+    preheader: `Thanks ${firstName} — we'll be in touch shortly.`,
+    body: `
+      <h1 style="font-family:Georgia,serif; font-size:28px; color:#1a2b4a; margin:0 0 8px; font-weight:400;">
+        Thanks, ${firstName} — we've got your request.
+      </h1>
+      <p style="color:#5e6470; font-size:15px; margin:0 0 24px; line-height:1.6;">
+        A member of the Crisp Home Co. team will reach out shortly with your quote
+        and to answer any questions. We typically respond within a couple of hours
+        during business hours (9 AM–7 PM MT).
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="background:#f3f5f2; border-radius:8px; margin-bottom:24px;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0 0 10px; font-size:14px; color:#5e6470; line-height:1.6;">✓ &nbsp;Flat-rate pricing — no hourly surprises</p>
+          <p style="margin:0 0 10px; font-size:14px; color:#5e6470; line-height:1.6;">✓ &nbsp;Background-checked, insured local cleaners</p>
+          <p style="margin:0 0 10px; font-size:14px; color:#5e6470; line-height:1.6;">✓ &nbsp;Same-week availability</p>
+          <p style="margin:0; font-size:14px; color:#5e6470; line-height:1.6;">✓ &nbsp;100% satisfaction guarantee</p>
+        </td></tr>
+      </table>
+      <p style="color:#5e6470; font-size:15px; margin:0 0 24px; line-height:1.6;">
+        Can't wait? You can see your exact price and book online right now:
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+        <tr><td align="center">
+          <a href="${BRAND_URL}/book"
+             style="display:inline-block; background:#9eaa8f; color:#1a2b4a; text-decoration:none;
+                    font-size:15px; font-weight:600; padding:14px 32px; border-radius:6px;">
+            See My Instant Price →
+          </a>
+        </td></tr>
+      </table>
+      <p style="color:#8a93a3; font-size:13px; margin:20px 0 0; line-height:1.6;">
+        Questions? Just reply to this email — we're happy to help.
+      </p>
+    `,
+  })
+
+  await resend.emails.send({
+    from:    FROM,
+    to:      lead.email,
+    subject: `Thanks ${firstName} — your Crisp Home Co. quote is on the way`,
+    html,
+  })
+}
+
 // ── Shared HTML helpers ───────────────────────────────────────────────────────
 
 function emailShell({ preheader, body }: { preheader: string; body: string }): string {

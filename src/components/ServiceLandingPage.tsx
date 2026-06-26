@@ -14,7 +14,7 @@ const SCHEMA_ORG = (page: ServicePage) => {
       name: 'Salt Lake City',
       addressRegion: 'UT',
     },
-    telephone: '+18016000000',
+    telephone: '+13852375485',
     email: 'hello@crisphomeco.com',
   }
   return JSON.stringify(base)
@@ -63,13 +63,19 @@ export default function ServiceLandingPage({ page }: { page: ServicePage }) {
             >
               {page.cta.button}
             </Link>
-            <a
-              href="tel:+18016000000"
+            <Link
+              href="/quote"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-md border border-white/20 text-white text-sm hover:bg-white/10 transition-colors"
             >
-              Call (801) 600-0000
-            </a>
+              Get a free quote
+            </Link>
           </div>
+          <a
+            href="tel:+13852375485"
+            className="inline-block mt-4 text-white/50 hover:text-white text-sm transition-colors"
+          >
+            Or call (385) 237-5485
+          </a>
         </div>
       </div>
 
