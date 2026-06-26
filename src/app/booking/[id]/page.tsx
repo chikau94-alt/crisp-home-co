@@ -96,7 +96,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
       {paymentSucceeded && (
         <Script id="gads-conversion" strategy="afterInteractive">
           {`gtag('event', 'conversion', {
-            'send_to': 'AW-18254764683/9GlYCRbk2MicIulxoBE',
+            'send_to': 'AW-18254764683/9GlYCKbk2MIcEIu1xoBE',
             'transaction_id': '${id}'
           });`}
         </Script>
