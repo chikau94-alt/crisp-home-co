@@ -148,3 +148,26 @@ export async function deleteBooking(bookingId: string) {
 
   revalidatePath('/admin')
 }
+
+// ── Leads ─────────────────────────────────────────────────────────────────────
+
+export async function updateLeadStatus(
+  leadId: string,
+  status: 'new' | 'contacted' | 'converted' | 'lost'
+): Promise<void> {
+  const db = getSupabaseAdmin()
+  const patch: Record<string, unknown> = { status }
+  if (status === 'contacted')  patch.contacted_at  = new Date().toISOString()
+  if (status === 'converted')  patch.converted_at  = new Date().toISOString()
+
+  const { error } = await db.from('leads').update(patch).eq('id', leadId)
+  if (error) throw new Error('Failed to update lead: ' + error.message)
+  revalidatePath('/admin/leads')
+}
+
+export async function updateLeadNotes(leadId: string, notes: string): Promise<void> {
+  const db = getSupabaseAdmin()
+  const { error } = await db.from('leads').update({ notes }).eq('id', leadId)
+  if (error) throw new Error('Failed to save notes: ' + error.message)
+  revalidatePath('/admin/leads')
+}
